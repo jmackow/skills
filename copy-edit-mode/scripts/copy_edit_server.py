@@ -36,41 +36,89 @@ LOCAL = re.compile(r"^https?://(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$")
 LOCAL_HOST = re.compile(r"^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$", re.I)
 LOCK = threading.Lock()
 
+# Marks on the page itself. The panel is styled inside its own shadow root (PANEL_CSS), like tweak mode.
 CSS = """
-html.__ce-editing [data-ce-id]{outline:1px dashed rgba(99,102,241,.45);outline-offset:2px;border-radius:2px;cursor:text;}
-html.__ce-editing [data-ce-id]:hover{outline:1px solid #6366f1;background:rgba(99,102,241,.07);}
-html.__ce-editing [data-ce-id]:focus{outline:2px solid #6366f1;background:rgba(99,102,241,.10);}
-[data-ce-dirty="1"]{outline:2px solid #f59e0b !important;background:rgba(245,158,11,.10) !important;}
-#__ce-toggle{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #1f2937;cursor:pointer;}
-#__ce-toggle .sw{width:38px;height:22px;border-radius:99px;background:#374151;position:relative;transition:background .15s;flex:none;}
-#__ce-toggle .sw i{position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:99px;background:#fff;transition:left .15s;}
-#__ce-toggle.on .sw{background:#6366f1;}
-#__ce-toggle.on .sw i{left:19px;}
-#__ce-toggle .lbl{font-weight:600;}
-#__ce-toggle .hint{color:#9ca3af;font-size:11px;margin-left:auto;text-align:right;line-height:1.3;}
-#__ce-bar{position:fixed;z-index:2147483647;right:16px;bottom:16px;width:300px;overflow:hidden;border-radius:12px;
-  font:13px/1.4 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#111827;color:#f9fafb;
-  box-shadow:0 10px 30px rgba(0,0,0,.35);}
-#__ce-bar header{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#0b1220;font-weight:600;}
-#__ce-bar header .dot{width:8px;height:8px;border-radius:99px;background:#6366f1;}
-#__ce-bar .body{padding:10px 12px;display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow:auto;}
-#__ce-bar button{all:unset;text-align:center;padding:8px 10px;border-radius:8px;background:#6366f1;color:#fff;
-  font-weight:600;cursor:pointer;box-sizing:border-box;}
-#__ce-bar button.sec{background:#374151;}
-#__ce-bar button[disabled]{opacity:.45;cursor:not-allowed;}
-#__ce-bar .row{display:flex;flex-direction:column;gap:4px;}
-#__ce-bar label{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#9ca3af;}
-#__ce-bar input,#__ce-bar textarea{width:100%;box-sizing:border-box;background:#1f2937;border:1px solid #374151;
-  color:#f9fafb;border-radius:6px;padding:6px 8px;font:12px/1.4 ui-sans-serif,system-ui;}
-#__ce-bar .count{color:#9ca3af;font-size:12px;}
-#__ce-bar .imgrow{display:flex;gap:8px;align-items:center;}
-#__ce-bar .imgrow img{width:34px;height:34px;object-fit:cover;border-radius:4px;background:#374151;flex:none;}
-#__ce-tabs{display:flex;gap:4px;padding:8px 12px 0;}
-#__ce-tabs span{padding:5px 9px;border-radius:6px;background:#1f2937;color:#9ca3af;cursor:pointer;font-size:12px;}
-#__ce-tabs span.on{background:#6366f1;color:#fff;}
-#__ce-toast{position:fixed;z-index:2147483647;left:50%;transform:translateX(-50%);bottom:24px;background:#065f46;
-  color:#ecfdf5;padding:10px 16px;border-radius:10px;font:13px ui-sans-serif,system-ui;box-shadow:0 8px 24px rgba(0,0,0,.3);}
-@media print{#__ce-bar{display:none}}
+html.__ce-editing [data-ce-id]{cursor:text;border-radius:2px;outline:1px solid transparent;outline-offset:2px;transition:outline-color .12s ease,background-color .12s ease;}
+html.__ce-editing [data-ce-id]:hover{outline-color:rgba(0,122,255,.55);}
+html.__ce-editing [data-ce-id]:focus{outline:1.5px solid #007AFF;background:rgba(0,122,255,.06);}
+[data-ce-dirty="1"]{background:rgba(0,122,255,.12) !important;box-shadow:0 1.5px 0 #007AFF;-webkit-box-decoration-break:clone;box-decoration-break:clone;}
+@media print{copy-edit-mode{display:none !important}}
+"""
+
+PANEL_CSS = """
+:host { all: initial; }
+:host {
+  --bg: #FFFFFF; --fg: #191A1C; --fg2: rgba(0,0,0,.5); --fg3: rgba(0,0,0,.26);
+  --fill1: rgba(0,0,0,.10); --fill2: rgba(0,0,0,.08); --fill3: rgba(0,0,0,.06); --border: rgba(0,0,0,.10);
+  --strong: #191A1C; --on-strong: #FFFFFF; --accent: #007AFF; --danger: #FF383C;
+  --menu-shadow: 0 8px 24px rgba(0,0,0,.12); --ease: cubic-bezier(.23,1,.32,1);
+}
+@media (prefers-color-scheme: dark) {
+  :host {
+    --bg: #171718; --fg: #E9E9E9; --fg2: rgba(255,255,255,.45); --fg3: rgba(255,255,255,.25);
+    --fill1: rgba(255,255,255,.12); --fill2: rgba(255,255,255,.09); --fill3: rgba(255,255,255,.06); --border: rgba(255,255,255,.08);
+    --strong: #FFFFFF; --on-strong: #0E0E0F; --accent: #0091FF; --danger: #FF4245; --menu-shadow: 0 8px 24px rgba(0,0,0,.45);
+  }
+}
+* { box-sizing: border-box; }
+.ui, .ui * { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "Segoe UI", sans-serif; font-size: 13px; line-height: 16px; letter-spacing: -0.26px; -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; background: none; border: 0; margin: 0; padding: 0; cursor: pointer; }
+.panel {
+  position: fixed; top: 12px; right: 12px; width: 288px; max-height: calc(100vh - 24px); display: flex; flex-direction: column;
+  border-radius: 12px; background: var(--bg); color: var(--fg); box-shadow: 0 0 0 1px var(--border), var(--menu-shadow);
+  overflow: hidden; pointer-events: auto; animation: in 160ms var(--ease);
+}
+@keyframes in { from { opacity: 0; transform: scale(.98); } }
+.head { display: flex; align-items: center; gap: 4px; height: 44px; flex: none; padding: 0 6px 0 12px; border-bottom: 1px solid var(--border); }
+.title { flex: 1; min-width: 0; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.count { color: var(--fg2); white-space: nowrap; padding-right: 4px; font-variant-numeric: tabular-nums; }
+.count.has { color: var(--accent); }
+.ibtn { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 6px; color: var(--fg2); transition: background-color 120ms ease, color 120ms ease; }
+.ibtn:hover { background: var(--fill3); color: var(--fg); }
+.ibtn svg { width: 16px; height: 16px; }
+.ibtn:focus-visible, .seg > button:focus-visible, .btn:focus-visible, .chg:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 50%, transparent); outline-offset: 1px; }
+.modes { display: grid; gap: 6px; padding: 12px; border-bottom: 1px solid var(--border); }
+.hint { color: var(--fg2); }
+.seg { display: flex; gap: 2px; padding: 2px; width: 100%; border-radius: 8px; background: var(--fill3); }
+.seg > button { flex: 1 1 0; min-width: 0; height: 24px; display: grid; place-items: center; padding: 0 6px; border-radius: 6px; color: var(--fg2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: background-color 120ms ease, color 120ms ease; }
+.seg > button:hover { color: var(--fg); }
+.seg > button[aria-checked="true"] { background: var(--bg); color: var(--fg); box-shadow: 0 1px 2px rgba(0,0,0,.1); }
+@media (prefers-color-scheme: dark) { .seg > button[aria-checked="true"] { background: var(--fill1); box-shadow: none; } }
+.body { flex: 1 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain; }
+.sec { display: grid; gap: 6px; padding: 12px; }
+.sec + .sec { border-top: 1px solid var(--border); }
+.sec-head { font-weight: 500; min-height: 20px; display: flex; align-items: center; }
+.empty { padding: 28px 20px; color: var(--fg2); text-align: center; }
+.chg { display: grid; gap: 2px; width: 100%; padding: 8px; border-radius: 8px; text-align: left; transition: background-color 120ms ease; }
+.chg:hover { background: var(--fill3); }
+.chg .a { color: var(--fg); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.chg .b { color: var(--fg2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: line-through; text-decoration-color: var(--fg3); }
+.lab { color: var(--fg2); }
+.f {
+  display: flex; align-items: center; gap: 8px; width: 100%; min-height: 28px; min-width: 0; padding: 0 8px; border-radius: 6px;
+  background: var(--fill3); color: var(--fg); transition: background-color 120ms ease;
+}
+.f:hover { background: var(--fill2); }
+.f:focus-within { box-shadow: inset 0 0 0 1px var(--accent); }
+.f.is-changed { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent); }
+.f input, .f textarea { flex: 1; min-width: 0; width: 100%; border: 0; padding: 6px 0; background: none; outline: none; color: inherit; resize: none; }
+.f textarea { min-height: 64px; }
+.f input::placeholder, .f textarea::placeholder { color: var(--fg2); opacity: 1; }
+.f img { flex: none; width: 20px; height: 20px; border-radius: 4px; object-fit: cover; background: var(--fill1); }
+.field { display: grid; gap: 4px; }
+.foot { flex: none; display: flex; align-items: center; gap: 4px; padding: 8px 8px 8px 12px; border-top: 1px solid var(--border); }
+.spacer { flex: 1; }
+.btn { height: 28px; padding: 0 12px; border-radius: 999px; font-weight: 500; background: var(--fill3); transition: background-color 120ms ease, opacity 120ms ease; }
+.btn:hover { background: var(--fill2); }
+.btn.primary { background: var(--strong); color: var(--on-strong); }
+.btn.primary:hover { background: color-mix(in srgb, var(--strong) 85%, var(--bg)); }
+.btn:disabled { background: var(--fill3); color: var(--fg); cursor: default; opacity: .5; }
+.note { flex: none; padding: 0 12px 10px; color: var(--fg2); }
+.note.is-error { color: var(--danger); }
+.reopen { position: fixed; right: 12px; bottom: 12px; height: 36px; padding: 0 14px; border-radius: 999px; background: var(--strong); color: var(--on-strong); font-weight: 500; pointer-events: auto; box-shadow: var(--menu-shadow); }
+@media (max-width: 640px) {
+  .panel { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 46vh; }
+}
 """
 
 JS = r"""
@@ -80,14 +128,16 @@ JS = r"""
 
   var SERVER = window.__CE_SERVER || '';
   var CSS_TEXT = __CE_CSS__;
+  var PANEL_CSS = __CE_PANEL_CSS__;
   var SKIP = {SCRIPT:1,STYLE:1,NOSCRIPT:1,TEXTAREA:1,CODE:1,PRE:1,SVG:1,IFRAME:1,CANVAS:1,SELECT:1,OPTION:1,TEMPLATE:1};
   function skipped(el){ return SKIP[(el.tagName || '').toUpperCase()] || (el.closest && el.closest('svg')); }
 
   var nodes = [], imgs = [], metaTitle = null, metaDesc = null, seq = 0;
-  var bar, paneSeo, countEl, saveBtn, toggleEl;
+  var host, ui, panel, reopenBtn, countEl, saveBtn, noteEl, modeSeg, tabSeg, paneText, paneSeo, tab = 'text', noteTimer;
   var editing = true;
 
-  function inBar(el){ return el && el.closest && el.closest('#__ce-bar'); }
+  // the panel lives in <copy-edit-mode> (a shadow root): events from inside it arrive with that element as target
+  function inBar(el){ return el && el.closest && el.closest('copy-edit-mode'); }
 
   var INTERACTIVE = 'a,button,[role="button"],[role="link"],input,select,label,summary,[onclick]';
 
@@ -125,11 +175,10 @@ JS = r"""
         document.activeElement.hasAttribute('data-ce-id')) {
       document.activeElement.blur();
     }
-    if (toggleEl){
-      toggleEl.classList.toggle('on', editing);
-      toggleEl.querySelector('.lbl').textContent = editing ? 'Edit mode' : 'Preview mode';
-      toggleEl.querySelector('.hint').textContent = editing ? 'clicks disabled' : 'site is live';
-    }
+    if (modeSeg) setSeg(modeSeg, editing ? 'edit' : 'preview');
+    if (panel) panel.querySelector('.hint').textContent = editing
+      ? 'Click any text and type. Links are off. Esc switches.'
+      : 'Links work as usual. Esc switches back.';
   }
 
   function fileId(){
@@ -154,9 +203,9 @@ JS = r"""
         if (n.nodeValue && n.nodeValue.trim().length){
           var p = n.parentNode;
           if (p && !skipped(p) && !p.hasAttribute('data-ce-id') &&
-              !(p.closest && p.closest('#__ce-bar'))) mark(n);
+              !(p.closest && p.closest('copy-edit-mode'))) mark(n);
         }
-      } else if (n.nodeType === 1 && !skipped(n) && n.id !== '__ce-bar' &&
+      } else if (n.nodeType === 1 && !skipped(n) && n.tagName !== 'COPY-EDIT-MODE' &&
                  !n.hasAttribute('data-ce-id')){
         walk(n);
       }
@@ -214,7 +263,6 @@ JS = r"""
   function collectExtras(){
     imgs = [];
     Array.prototype.forEach.call(document.images, function(img){
-      if (img.closest && img.closest('#__ce-bar')) return;
       imgs.push({el: img, before: img.getAttribute('alt') || ''});
     });
     metaTitle = {before: document.title || '', after: document.title || ''};
@@ -270,104 +318,142 @@ JS = r"""
 
   function allChanges(){ return textChanges().concat(extraChanges()); }
 
+  function h(tag, attrs){
+    var el = document.createElement(tag);
+    for (var k in (attrs || {})){
+      if (k === 'text') el.textContent = attrs[k];
+      else if (k === 'html') el.innerHTML = attrs[k];
+      else if (k.slice(0, 2) === 'on') el.addEventListener(k.slice(2), attrs[k]);
+      else el.setAttribute(k, attrs[k]);
+    }
+    for (var i = 2; i < arguments.length; i++) if (arguments[i]) el.append(arguments[i]);
+    return el;
+  }
+
+  function seg(items, onpick){
+    var el = h('div', {class: 'seg', role: 'radiogroup'});
+    items.forEach(function(it){
+      el.append(h('button', {type: 'button', role: 'radio', 'data-v': it[0], 'aria-checked': 'false', text: it[1],
+                             onclick: function(){ onpick(it[0]); }}));
+    });
+    return el;
+  }
+  function setSeg(el, v){
+    el.querySelectorAll('button').forEach(function(b){ b.setAttribute('aria-checked', b.getAttribute('data-v') === v ? 'true' : 'false'); });
+  }
+
+  function note(msg, bad){
+    noteEl.textContent = msg || '';
+    noteEl.className = 'note' + (bad ? ' is-error' : '');
+    noteEl.hidden = !msg;
+    clearTimeout(noteTimer);
+    if (msg && !bad) noteTimer = setTimeout(function(){ noteEl.hidden = true; }, 5000);
+  }
+
+  function short(t){ t = String(t).replace(/\s+/g, ' ').trim(); return t || '(empty)'; }
+
   function refresh(){
     if (!countEl) return;
-    var n = allChanges().length;
-    countEl.textContent = n === 0 ? 'No changes yet'
-      : n + (n === 1 ? ' change' : ' changes') + ' pending';
+    var all = allChanges(), n = all.length;
+    countEl.textContent = n === 0 ? 'No changes' : n + (n === 1 ? ' change' : ' changes');
+    countEl.className = 'count' + (n ? ' has' : '');
     saveBtn.disabled = n === 0;
+    if (tab === 'text') renderText();
   }
 
-  function toast(msg, bad){
-    var t = document.createElement('div');
-    t.id = '__ce-toast';
-    if (bad) t.style.background = '#7f1d1d';
-    t.textContent = msg;
-    document.body.appendChild(t);
-    setTimeout(function(){ t.remove(); }, 3500);
+  function renderText(){
+    paneText.textContent = '';
+    var edited = nodes.filter(function(n){ return n.el.isConnected && typed(n.el, n.before) !== n.before; });
+    if (!edited.length){
+      paneText.append(h('div', {class: 'empty', text: 'Click any text on the page and rewrite it. Edited text turns blue.'}));
+      return;
+    }
+    var sec = h('div', {class: 'sec'}, h('div', {class: 'sec-head', text: 'Edited on this page'}));
+    edited.forEach(function(n){
+      sec.append(h('button', {type: 'button', class: 'chg', title: 'Show on the page', onclick: function(){
+        n.el.scrollIntoView({block: 'center', behavior: 'smooth'});
+        if (editing) n.el.focus({preventScroll: true});
+      }}, h('span', {class: 'a', text: short(typed(n.el, n.before))}), h('span', {class: 'b', text: short(n.before)})));
+    });
+    paneText.append(sec);
   }
 
-  function field(label, value, onchange, multiline){
-    var row = document.createElement('div');
-    row.className = 'row';
-    var lab = document.createElement('label');
-    lab.textContent = label;
-    var inp = document.createElement(multiline ? 'textarea' : 'input');
+  function field(label, value, onchange, multiline, thumb){
+    var inp = h(multiline ? 'textarea' : 'input', {'aria-label': label});
     if (multiline) inp.rows = 3;
     inp.value = value;
-    inp.addEventListener('input', function(){ onchange(inp.value); });
-    row.appendChild(lab); row.appendChild(inp);
-    return row;
+    var box = h('label', {class: 'f'}, thumb ? h('img', {src: thumb, alt: ''}) : null, inp);
+    inp.addEventListener('input', function(){ box.classList.toggle('is-changed', inp.value !== value); onchange(inp.value); });
+    return {row: h('div', {class: 'field'}, h('span', {class: 'lab', text: label}), box), input: inp};
   }
 
   function buildSeoPane(){
-    paneSeo.innerHTML = '';
-    var frag = document.createElement('div');
-    frag.style.cssText = 'display:flex;flex-direction:column;gap:10px;';
-    frag.appendChild(field('Page title', metaTitle.before, function(v){ metaTitle.after = v; refresh(); }));
-    frag.appendChild(field('Meta description', metaDesc.before, function(v){ metaDesc.after = v; refresh(); }, true));
+    paneSeo.textContent = '';
+    var page = h('div', {class: 'sec'}, h('div', {class: 'sec-head', text: 'Page'}));
+    page.append(field('Title', metaTitle.before, function(v){ metaTitle.after = v; refresh(); }).row);
+    page.append(field('Description', metaDesc.before, function(v){ metaDesc.after = v; refresh(); }, true).row);
+    paneSeo.append(page);
+    if (!imgs.length) return;
+    var pics = h('div', {class: 'sec'}, h('div', {class: 'sec-head', text: 'Image alt text'}));
     imgs.forEach(function(i, idx){
-      var row = document.createElement('div');
-      row.className = 'row';
-      var lab = document.createElement('label');
-      lab.textContent = 'Alt text - image ' + (idx + 1);
-      var wrap = document.createElement('div');
-      wrap.className = 'imgrow';
-      var thumb = document.createElement('img');
-      thumb.src = i.el.getAttribute('src') || '';
-      var inp = document.createElement('input');
-      inp.value = i.before;
-      inp.addEventListener('input', refresh);
-      i.input = inp;
-      wrap.appendChild(thumb); wrap.appendChild(inp);
-      row.appendChild(lab); row.appendChild(wrap);
-      frag.appendChild(row);
+      var src = i.el.getAttribute('src') || '';
+      var f = field((src.split('/').pop() || 'Image ' + (idx + 1)).split('?')[0], i.before, refresh, false, i.el.currentSrc || src);
+      f.input.setAttribute('placeholder', 'No alt text');
+      i.input = f.input;
+      pics.append(f.row);
     });
-    paneSeo.appendChild(frag);
+    paneSeo.append(pics);
+  }
+
+  function showTab(v){
+    tab = v; setSeg(tabSeg, v);
+    paneText.hidden = v !== 'text'; paneSeo.hidden = v !== 'seo';
+    refresh();
+  }
+
+  function setOpen(on){
+    panel.hidden = !on; reopenBtn.hidden = on;
+    setEditing(on);
   }
 
   function buildBar(){
-    bar = document.createElement('div');
-    bar.id = '__ce-bar';
-    bar.innerHTML =
-      '<header><span class="dot"></span>Copy edit mode</header>' +
-      '<div id="__ce-toggle" class="on"><span class="sw"><i></i></span>' +
-      '<span class="lbl">Edit mode</span><span class="hint">clicks disabled</span></div>' +
-      '<div id="__ce-tabs"><span class="on" data-t="text">Text</span>' +
-      '<span data-t="seo">Images &amp; SEO</span></div>' +
-      '<div class="body" id="__ce-pane-text">' +
-        '<div class="count" id="__ce-count">No changes yet</div>' +
-        '<button id="__ce-save" disabled>Save changes</button>' +
-        '<button class="sec" id="__ce-rescan">Re-scan page</button>' +
-      '</div>' +
-      '<div class="body" id="__ce-pane-seo" style="display:none"></div>';
-    document.body.appendChild(bar);
+    host = document.createElement('copy-edit-mode');
+    // inline !important beats any page rule, even "* { ... !important }"
+    host.style.cssText = 'all:initial !important;position:fixed !important;inset:0 !important;z-index:2147483647 !important;pointer-events:none !important;display:block !important;';
+    var shadow = host.attachShadow({mode: 'open'});
+    shadow.innerHTML = '<style>' + PANEL_CSS + '</style><div class="ui"></div>';
+    ui = shadow.querySelector('.ui');
 
-    countEl = bar.querySelector('#__ce-count');
-    saveBtn = bar.querySelector('#__ce-save');
-    paneSeo = bar.querySelector('#__ce-pane-seo');
-    toggleEl = bar.querySelector('#__ce-toggle');
+    countEl = h('span', {class: 'count', text: 'No changes'});
+    var close = h('button', {type: 'button', class: 'ibtn', title: 'Close (the site works as usual)', 'aria-label': 'Close',
+      html: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>',
+      onclick: function(){ setOpen(false); }});
+    modeSeg = seg([['edit', 'Edit'], ['preview', 'Preview']], function(v){ setEditing(v === 'edit'); });
+    tabSeg = seg([['text', 'Text'], ['seo', 'Images & SEO']], showTab);
+    paneText = h('div', {class: 'pane-text'});
+    paneSeo = h('div', {class: 'pane-seo', hidden: ''});
+    saveBtn = h('button', {type: 'button', class: 'btn primary', disabled: '', text: 'Save', onclick: save});
+    var rescan = h('button', {type: 'button', class: 'btn', text: 'Re-scan', title: 'Find new text after the page changed', onclick: function(){
+      scan(true); note('Re-scanned: ' + nodes.length + ' text spots.');
+    }});
+    noteEl = h('div', {class: 'note', hidden: ''});
+    panel = h('div', {class: 'panel', role: 'dialog', 'aria-label': 'Copy edit mode'},
+      h('div', {class: 'head'}, h('span', {class: 'title', text: 'Copy edit'}), countEl, close),
+      h('div', {class: 'modes'}, modeSeg, h('div', {class: 'hint'})),
+      h('div', {class: 'body'}, h('div', {class: 'sec', style: 'padding-bottom:0'}, tabSeg), paneText, paneSeo),
+      noteEl,
+      h('div', {class: 'foot'}, rescan, h('span', {class: 'spacer'}), saveBtn));
+    reopenBtn = h('button', {type: 'button', class: 'reopen', hidden: '', text: 'Copy edit', onclick: function(){ setOpen(true); }});
+    ui.append(panel, reopenBtn);
+    document.documentElement.appendChild(host);
 
-    toggleEl.addEventListener('click', function(){ setEditing(!editing); });
+    // what happens in the panel stays in the panel: the page's own listeners never see it
+    ['keydown', 'keyup', 'keypress', 'input', 'change', 'click', 'dblclick', 'pointerdown', 'pointerup', 'mousedown', 'mouseup', 'focusin', 'focusout']
+      .forEach(function(t){ host.addEventListener(t, function(e){ e.stopPropagation(); }); });
     document.addEventListener('keydown', function(e){
-      if (e.key === 'Escape' && !inBar(e.target)) setEditing(!editing);
+      if (e.key === 'Escape' && !inBar(e.target) && !panel.hidden) setEditing(!editing);
     });
-
-    bar.querySelectorAll('#__ce-tabs span').forEach(function(s){
-      s.addEventListener('click', function(){
-        bar.querySelectorAll('#__ce-tabs span').forEach(function(x){ x.classList.remove('on'); });
-        s.classList.add('on');
-        var isText = s.dataset.t === 'text';
-        bar.querySelector('#__ce-pane-text').style.display = isText ? 'flex' : 'none';
-        paneSeo.style.display = isText ? 'none' : 'flex';
-      });
-    });
-
-    bar.querySelector('#__ce-rescan').addEventListener('click', function(){
-      scan(true);
-      toast('Re-scanned. ' + nodes.length + ' editable spots.');
-    });
-    saveBtn.addEventListener('click', save);
+    setSeg(tabSeg, 'text');
   }
 
   function scan(keepEdits){
@@ -382,7 +468,7 @@ JS = r"""
   function save(){
     var changes = allChanges();
     saveBtn.disabled = true;
-    saveBtn.textContent = 'Saving...';
+    saveBtn.textContent = 'Saving';
     fetch(SERVER + '/__ce_save', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -392,12 +478,13 @@ JS = r"""
       if (!r.ok) throw new Error(r.status === 403 ? 'Only pages on localhost or 127.0.0.1 can save.' : 'Save failed (' + r.status + ').');
       return r.json();
     }).then(function(r){
-      saveBtn.textContent = 'Save changes';
-      toast(r.count + ' change(s) saved. Tell Claude to apply them.');
-    }).catch(function(err){
-      saveBtn.textContent = 'Save changes';
+      saveBtn.textContent = 'Save';
       saveBtn.disabled = false;
-      toast(err && err.message && !/fetch/i.test(err.message) ? err.message : 'Save failed - is the copy-edit server still running?', true);
+      note('Saved ' + r.count + (r.count === 1 ? ' change' : ' changes') + '. Tell Claude to apply them.');
+    }).catch(function(err){
+      saveBtn.textContent = 'Save';
+      saveBtn.disabled = false;
+      note(err && err.message && !/fetch/i.test(err.message) ? err.message : 'Save failed. Is the copy edit server still running?', true);
     });
   }
 
@@ -420,7 +507,7 @@ JS = r"""
 
 
 def overlay_js(server_origin=""):
-    js = JS.replace("__CE_CSS__", json.dumps(CSS))
+    js = JS.replace("__CE_CSS__", json.dumps(CSS)).replace("__CE_PANEL_CSS__", json.dumps(PANEL_CSS))
     prefix = ""
     if server_origin:
         prefix = 'window.__CE_SERVER=%s;\n' % json.dumps(server_origin)

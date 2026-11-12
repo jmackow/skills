@@ -81,8 +81,8 @@ URL, for example `http://localhost:3000`.
 
 ### 4. App mode caveats to tell the user up front
 
-- To navigate between pages, switch to Preview mode first, then back to Edit mode.
-- After navigating to another route, click **Re-scan page** in the toolbar. Client-side
+- To navigate between pages, switch to Preview first, then back to Edit.
+- After navigating to another route, click **Re-scan** in the panel. Client-side
   navigation does not reload the overlay.
 - Save on each page **before** navigating away. Unsaved edits are lost on route change.
 - React can overwrite an edited spot if that component re-renders. If text jumps back,
@@ -96,12 +96,11 @@ URL, for example `http://localhost:3000`.
 
 Tell them:
 
-- Toggle at the top of the toolbar switches between Edit mode and Preview mode.
-  In Edit mode all links and buttons are dead so clicking them edits text instead.
-  Switch to Preview mode to click through the site normally. Escape key toggles too.
-- Click any text to edit in place. Edited spots turn orange.
-- The "Images & SEO" tab holds image alt text, page title and meta description.
-- Press "Save changes" on every page before moving on.
+- A panel sits in the top right corner. "Edit" makes every text on the page editable and turns links and buttons
+  off, so a click edits text. "Preview" brings the site back to normal so they can click through it. Escape switches too.
+- Click any text and type. Edited text turns blue and is listed in the panel.
+- The "Images & SEO" tab holds the page title, the meta description and each image's alt text.
+- Press "Save" on every page before moving on.
 - Come back to the chat and say "done".
 
 Keep the server running. Wait for them to say they are finished. Do not guess.

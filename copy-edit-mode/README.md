@@ -18,10 +18,10 @@ You also need Python 3.
 
 Say "edit mode", "copy pass", "let me edit the text myself", or type `/copy-edit-mode`.
 
-1. Claude serves your site with a small toolbar (for React, Next.js, Vite or Astro it adds one dev-only script tag and removes it at the end).
-2. In Edit mode links and buttons do nothing, so a click edits text. Switch to Preview mode (or press Escape) to click through the site.
-3. Edited spots turn orange. The "Images & SEO" tab holds alt texts, the page title and the description.
-4. Press "Save changes" on each page and tell Claude you are done. It finds each text in your code and replaces it, and lists anything it could not find (text from a CMS or a database).
+1. Claude serves your site with a small panel in the corner (for React, Next.js, Vite or Astro it adds one dev-only script tag and removes it at the end).
+2. In Edit, links and buttons do nothing, so a click edits text. Switch to Preview (or press Escape) to click through the site.
+3. Edited text turns blue and is listed in the panel. The "Images & SEO" tab holds alt texts, the page title and the description.
+4. Press Save on each page and tell Claude you are done. It finds each text in your code and replaces it, and lists anything it could not find (text from a CMS or a database).
 
 ## On the demo site
 
