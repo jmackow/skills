@@ -1,0 +1,7 @@
+{
+  "name": "accessibility-audit",
+  "private": true,
+  "type": "module",
+  "description": "Uses the Chrome already on the computer through playwright-core. No browser download.",
+  "dependencies": { "playwright-core": "1.63.0" }
+}
